@@ -1,0 +1,66 @@
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
+# COCO128 dataset https://www.kaggle.com/ultralytics/coco128 (first 128 images from COCO train2017) by Ultralytics
+# Example usage: python train.py --data coco128.yaml
+# parent
+# ├── yolov5
+# └── datasets
+#     └── coco128  ← downloads here (7 MB)
+
+
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+path: /home/cooper/Documents/RM2023-Deep-Radar/dataset/armor/3  # dataset root dir
+train: train  # train images (relative to 'path') 128 images
+val: val  # val images (relative to 'path') 128 images
+test: test # test images (optional)
+
+# Classes
+nc: 36
+names:
+  # 0: car_red
+  # 1: car_blue
+  # 2: car_unknow
+  # 3: watcher_red
+  # 4: watcher_blue
+  # 5: watcher_unknow
+  # 6: armor_red
+  # 7: armor_blue
+  # 8: armor_grey
+  0:  B_sentry_live
+  1:  B1
+  2:  B2
+  3:  B3
+  4:  B4
+  5:  B5
+  6:  B_outpost_live
+  7:
+  8:  B_base_live
+  9:  R_sentry_live
+  10:  R1
+  11:  R2
+  12:  R3
+  13:  R4
+  14: R5
+  15: R_outpost_live
+  17: R_base_live  # upper armor of red outpost
+  18: sentry_dead  #  armor of red outpost
+  19: 1_dead
+  20: 2_dead
+  21: 3_dead
+  22: 4_dead
+  23: 5_dead
+  24: outpost_dead
+  25: 
+  26:
+  27:
+  28:
+  29:
+  30:
+  31:
+  32:
+  33:
+  34:
+  35:
+  36:
+
+  
+  
