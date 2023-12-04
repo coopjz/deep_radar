@@ -12,17 +12,17 @@ import multiprocessing as mlt
 import pickle as pkl
 
 # 各个对象
-from radar_class.Lidar import Radar,DepthQueue
+from radar_class.Lidar import Radar, DepthQueue
 from mainEntry import Mywindow
 from radar_class.camera import Camera_Thread, read_yaml
 from radar_class.hik_driver import *
 from radar_class.reproject import Real_Scene
 from radar_class.location_alarm import Alarm
 from radar_class.location import locate_pick, locate_record
-from radar_class.config import enemy,usb, \
-    color2enemy,loc2car,loc2code,state2color,\
-    INIT_FRAME_PATH,OUTPUT_LOGGING_DIR,SPECIFIC_LOGGING_BATTLE_MODE_DIR,SPECIFIC_LOGGING_NON_BATTLE_MODE_DIR,DEMO_PKL_DIR,\
-    main_region,battle_mode,real_size,using_dq,PC_RECORD_SAVE_DIR,debug,home_test,using_video,VIDEO_PATH,split # 测试参
+from radar_class.config import enemy, usb, \
+    color2enemy, loc2car, loc2code, state2color, \
+    INIT_FRAME_PATH, OUTPUT_LOGGING_DIR, SPECIFIC_LOGGING_BATTLE_MODE_DIR, SPECIFIC_LOGGING_NON_BATTLE_MODE_DIR, DEMO_PKL_DIR, \
+    main_region, battle_mode, real_size, using_dq, PC_RECORD_SAVE_DIR, debug, home_test, using_video, VIDEO_PATH, split  # 测试参
 from radar_class.common import armor_filter
 from radar_class.multiprocess_camera import base_process
 from radar_class.ui import HP_scene
@@ -41,9 +41,11 @@ record_net = []
 
 use_save_radar = False
 use_save_camera = False
-use_hik = True
+use_hik = False
 
 # 裁判系统发送函数
+
+
 def send_judge(message: dict, myshow: Mywindow, f):
     '''
     alarming format define
@@ -57,7 +59,8 @@ def send_judge(message: dict, myshow: Mywindow, f):
         if myshow.record_state and battle_mode:
             for label, cl in whole_location.items():
                 # logging记录
-                f.write("target %s x y z: %.03f %.03f %.03f\n"% (label, cl[0], cl[1], cl[2]))
+                f.write("target %s x y z: %.03f %.03f %.03f\n" %
+                        (label, cl[0], cl[1], cl[2]))
         loc = []
         whole_location: dict = message['data'][1]
         for i in range(1, 6):
@@ -80,9 +83,11 @@ def send_judge(message: dict, myshow: Mywindow, f):
     #     myshow.set_text("feedback", "<font color='#FF0000'><b>反导信息发送</b></font>")
 
 # 主程序类
+
+
 class MainProcess(object):
     def __init__(self, myshow: Mywindow, log_f):
-        self._log_f = log_f # logging
+        self._log_f = log_f  # logging
         self._myshow = myshow
         # 展示api定义
         self._show_api_m = lambda x: myshow.set_image(x, "map")
@@ -98,8 +103,8 @@ class MainProcess(object):
         # camera0 Radar class and Real_Scene class
         _, K_0, C_0, E_0, imgsz = read_yaml(0)
         if use_save_radar:
-            if using_dq: # 使用点云队列
-                self._radar.append(DepthQueue(200,imgsz,K_0,C_0,E_0))
+            if using_dq:  # 使用点云队列
+                self._radar.append(DepthQueue(200, imgsz, K_0, C_0, E_0))
                 # 填入点云
                 with open(PC_RECORD_SAVE_DIR, 'rb') as f:
                     radar_frames = pkl.load(f)
@@ -110,12 +115,13 @@ class MainProcess(object):
         else:
             self.depth_predictor.append(DepthPredictor(K_0, C_0, size=imgsz))
 
-        self._scene.append(Real_Scene(frame, 0, main_region, enemy, real_size, K_0, C_0, self._touch_api, debug = debug))
+        self._scene.append(Real_Scene(frame, 0, main_region, enemy,
+                           real_size, K_0, C_0, self._touch_api, debug=debug))
         # camera0 Radar class and scene class
         _, K_0, C_0, E_0, imgsz = read_yaml(1)
         if use_save_radar:
-            if using_dq: # 使用点云队列
-                self._radar.append(DepthQueue(200,imgsz,K_0,C_0,E_0))
+            if using_dq:  # 使用点云队列
+                self._radar.append(DepthQueue(200, imgsz, K_0, C_0, E_0))
                 # 填入点云
                 with open(PC_RECORD_SAVE_DIR, 'rb') as f:
                     radar_frames = pkl.load(f)
@@ -126,25 +132,28 @@ class MainProcess(object):
         else:
             self.depth_predictor.append(DepthPredictor(K_0, C_0, size=imgsz))
 
-        self._scene.append(Real_Scene(frame, 1, main_region, enemy, real_size, K_0, C_0, self._touch_api, debug = debug))
+        self._scene.append(Real_Scene(frame, 1, main_region, enemy,
+                           real_size, K_0, C_0, self._touch_api, debug=debug))
         # 位姿估计均未完成
         self._position_flag = np.array([False, False])
         # 位置预警类初始化
-        self._alarm_map = Alarm(main_region, self._show_api_m, self._touch_api, enemy, real_size,debug=debug)
+        self._alarm_map = Alarm(
+            main_region, self._show_api_m, self._touch_api, enemy, real_size, debug=debug)
         if not using_dq:
-            Radar.start() # 雷达开始工作
+            Radar.start()  # 雷达开始工作
         # base process init
         self._loc2basequeue = mlt.Queue(-1)
         self._manager = mlt.Manager()
-        self._loc2baseflag = self._manager.dict({"flag": False, 'record': False, 'battle_mode':battle_mode})
+        self._loc2baseflag = self._manager.dict(
+            {"flag": False, 'record': False, 'battle_mode': battle_mode})
         # self._base_process = mlt.Process(target=base_process, args=(self._loc2basequeue, self._loc2baseflag),daemon=True)
 
         # self._base_process.start()
         # 雷达队列初始化标志
         if using_dq and use_save_radar:
-            self._radar_init = [True,True] # 当使用点云队列测试时，直接默认为双True
+            self._radar_init = [True, True]  # 当使用点云队列测试时，直接默认为双True
         else:
-            self._radar_init = [False,False]
+            self._radar_init = [False, False]
 
         # init net #TODO: 替换你的神经网络
         if use_save_camera:
@@ -159,25 +168,24 @@ class MainProcess(object):
             # cap 1 is the right
             # cap 2 is the left
             self._cap1 = Camera_Thread(0, True,
-                                       video_path=os.path.join(VIDEO_PATH,"1.mp4"))
+                                       video_path=os.path.join(VIDEO_PATH, "1.mp4"))
             self._cap2 = Camera_Thread(1, True,
-                                       video_path=os.path.join(VIDEO_PATH,"2.mp4"))
+                                       video_path=os.path.join(VIDEO_PATH, "2.mp4"))
         else:
             self.left_info_lst = hik_init(0)
             self.right_info_lst = hik_init(1)
 
-
             # self._cap1 = Camera_Thread(0)
             # self._cap2 = Camera_Thread(1)
 
-        # if self._cap1.is_open():
-        #     print("[INFO] Camera {0} Starting.".format(0))
-        # else:
-        #     print("[INFO] Camera {0} Failed, try to open.".format(0))
-        # if self._cap2.is_open():
-        #     print("[INFO] Camera {0} Starting.".format(1))
-        # else:
-        #     print("[INFO] Camera {0} Failed, try to open.".format(1))
+        if self._cap1.is_open():
+            print("[INFO] Camera {0} Starting.".format(0))
+        else:
+            print("[INFO] Camera {0} Failed, try to open.".format(0))
+        if self._cap2.is_open():
+            print("[INFO] Camera {0} Starting.".format(1))
+        else:
+            print("[INFO] Camera {0} Failed, try to open.".format(1))
 
         # recording counting
         if battle_mode:
@@ -195,7 +203,7 @@ class MainProcess(object):
         '''
         使用保存的位姿
         '''
-        if self._position_flag.all(): # 全部位姿已估计完成
+        if self._position_flag.all():  # 全部位姿已估计完成
             self._myshow.set_text("feedback", "camera pose already init")
             return
         if not self._position_flag[0]:
@@ -207,7 +215,7 @@ class MainProcess(object):
                 # 将位姿存入反投影预警类
                 T, cp = self._scene[0].push_T(rvec1, tvec1)
                 # 将位姿存入位置预警类
-                self._alarm_map.push_T( T, cp, 0)
+                self._alarm_map.push_T(T, cp, 0)
             else:
                 myshow.set_text("feedback", "Camera 0 pose init error")
                 print("[INFO] Camera 0 pose init meet error")
@@ -218,9 +226,10 @@ class MainProcess(object):
                 self._myshow.set_text("feedback", "camera 1 pose init ")
                 print("[INFO] Camera 1 pose init")
                 T, cp = self._scene[1].push_T(rvec2, tvec2)
-                self._alarm_map.push_T( T, cp, 1)
+                self._alarm_map.push_T(T, cp, 1)
             else:
-                self._myshow.set_text("feedback", "camera 1 pose init meet error ")
+                self._myshow.set_text(
+                    "feedback", "camera 1 pose init meet error ")
                 print("[INFO] Camera 1 pose init meet error")
         # 重叠区域去重
         if split and self._position_flag.all():
@@ -228,13 +237,16 @@ class MainProcess(object):
             inside1 = np.stack(inside1, axis=0)
             inside2, _ = self._scene[1].get_inside()
             inside2 = np.stack(inside2, axis=0)
-            both_inside = np.logical_and(inside1.any(axis=1), inside2.any(axis=1)) # 大家都有的区域
-            larger = inside1.sum(axis=1) >= inside2.sum(axis=1) # 比较在图像内的点数
+            both_inside = np.logical_and(inside1.any(
+                axis=1), inside2.any(axis=1))  # 大家都有的区域
+            larger = inside1.sum(axis=1) >= inside2.sum(axis=1)  # 比较在图像内的点数
             lesser = np.logical_not(larger)
             # larger为c0比c1多，lesser为c1比c0多
             whole_location = np.array(whole_location)
-            self._scene[0].remove(whole_location[np.logical_and(lesser,both_inside)])
-            self._scene[1].remove(whole_location[np.logical_and(both_inside,larger)])
+            self._scene[0].remove(
+                whole_location[np.logical_and(lesser, both_inside)])
+            self._scene[1].remove(
+                whole_location[np.logical_and(both_inside, larger)])
 
     def get_position_new(self):
         '''
@@ -248,9 +260,11 @@ class MainProcess(object):
             flag = False
             if not use_hik:
                 if self._cap1.is_open():
-                    flag, rvec1, tvec1 = locate_pick(self._cap1, enemy, 0,  home_size= home_test, video_test=using_video)
+                    flag, rvec1, tvec1 = locate_pick(
+                        self._cap1, enemy, 0,  home_size=home_test, video_test=using_video)
             else:
-                flag, rvec1, tvec1 = locate_pick(self.right_info_lst, enemy, 0, home_size=home_test, video_test=using_video, use_hik=True)
+                flag, rvec1, tvec1 = locate_pick(
+                    self.right_info_lst, enemy, 0, home_size=home_test, video_test=using_video, use_hik=True)
             if flag:
                 self._position_flag[0] = True
                 print("[INFO] Camera 0 pose init")
@@ -262,9 +276,9 @@ class MainProcess(object):
                         f"camera{camera_type:d} rvec {float(rvec1[0]):0.5f} {float(rvec1[1]):0.5f} {float(rvec1[2]):0.5f}\n")
                     self._log_f.write(
                         f"camera{camera_type:d} tvec {float(tvec1[0]):0.5f} {float(tvec1[1]):0.5f} {float(tvec1[2]):0.5f}\n")
-                locate_record(0, enemy, True, rvec1, tvec1) # 保存
+                locate_record(0, enemy, True, rvec1, tvec1)  # 保存
                 T, cp = self._scene[0].push_T(rvec1, tvec1)
-                self._alarm_map.push_T( T, cp, 0)
+                self._alarm_map.push_T(T, cp, 0)
             else:
                 myshow.set_text("feedback", "Camera 0 pose init meet error")
                 print("[INFO] Camera 0 pose init error")
@@ -273,9 +287,11 @@ class MainProcess(object):
             flag = False
             if not use_hik:
                 if self._cap2.is_open():
-                    flag, rvec2, tvec2 = locate_pick(self._cap2, enemy, 1, home_size = home_test, video_test=using_video)
+                    flag, rvec2, tvec2 = locate_pick(
+                        self._cap2, enemy, 1, home_size=home_test, video_test=using_video)
             else:
-                flag, rvec2, tvec2 = locate_pick(self.left_info_lst, enemy, 1, home_size=home_test, video_test=using_video, use_hik=True)
+                flag, rvec2, tvec2 = locate_pick(
+                    self.left_info_lst, enemy, 1, home_size=home_test, video_test=using_video, use_hik=True)
             if flag:
                 self._position_flag[1] = True
                 if battle_mode:
@@ -292,7 +308,8 @@ class MainProcess(object):
                 print("[INFO] Camera 1 pose init")
                 self._myshow.set_text("feedback", "camera 1 pose init ")
             else:
-                self._myshow.set_text("feedback", "camera 1 pose init meet error")
+                self._myshow.set_text(
+                    "feedback", "camera 1 pose init meet error")
                 print("[INFO] Camera 1 pose init error")
         # 如果使用视频，将其恢复至视频开始
         if using_video:
@@ -304,12 +321,15 @@ class MainProcess(object):
             inside1 = np.stack(inside1, axis=0)
             inside2, _ = self._scene[1].get_inside()
             inside2 = np.stack(inside2, axis=0)
-            both_inside = np.logical_and(inside1.any(axis=1), inside2.any(axis=1))
+            both_inside = np.logical_and(
+                inside1.any(axis=1), inside2.any(axis=1))
             larger = inside1.sum(axis=1) >= inside2.sum(axis=1)
             lesser = np.logical_not(larger)
             whole_location = np.array(whole_location)
-            self._scene[0].remove(whole_location[np.logical_and(lesser, both_inside)])
-            self._scene[1].remove(whole_location[np.logical_and(both_inside, larger)])
+            self._scene[0].remove(
+                whole_location[np.logical_and(lesser, both_inside)])
+            self._scene[1].remove(
+                whole_location[np.logical_and(both_inside, larger)])
 
     def spin_once(self, base_open=False, base_close=False, whole_close=False, is_opening=False):
         '''
@@ -336,30 +356,31 @@ class MainProcess(object):
             self._loc2basequeue.put(2)
             return
         if base_open:
-            self._loc2basequeue.put(1) # task1
+            self._loc2basequeue.put(1)  # task1
         if base_close:
-            self._loc2basequeue.put(0) # task0
+            self._loc2basequeue.put(0)  # task0
 
         if self._myshow.record_state and battle_mode and not self._loc2baseflag["record"]:
-            self._loc2baseflag["record"] = True # 打开子视野的录制模型
+            self._loc2baseflag["record"] = True  # 打开子视野的录制模型
 
         if not self._myshow.record_state and self._loc2baseflag["record"]:
-            self._loc2baseflag["record"] = False # 关闭子视野的录制模型
+            self._loc2baseflag["record"] = False  # 关闭子视野的录制模型
 
         if is_opening and not self._loc2baseflag['flag']:
             # 当要求开启但未开启时，报错（一般一定会报一次，这是因为进程同步问题）
-            self._myshow.set_text("feedback", "CAMERA3 may meet some problem please waiting")
+            self._myshow.set_text(
+                "feedback", "CAMERA3 may meet some problem please waiting")
 
         # show state for check
         self._myshow.set_text("state", '<br \>'.join(["Radar1: " + "<font color='{0}'><b>{1}</b></font>".format(
             state2color[self._radar_init[0]], self._radar_init[0]),
-                                                      "Radar2: " + "<font color='{0}'><b>{1}</b></font>".format(
-                                                          state2color[self._radar_init[1]], self._radar_init[1]),
-                                                      "Pose1: " + "<font color='{0}'><b>{1}</b></font>".format(
-                                                          state2color[self._position_flag[0]], self._position_flag[0]),
-                                                      "Pose2: " + "<font color='{0}'><b>{1}</b></font>".format(
-                                                          state2color[self._position_flag[1]], self._position_flag[1])]
-                                                     ))
+            "Radar2: " + "<font color='{0}'><b>{1}</b></font>".format(
+            state2color[self._radar_init[1]], self._radar_init[1]),
+            "Pose1: " + "<font color='{0}'><b>{1}</b></font>".format(
+            state2color[self._position_flag[0]], self._position_flag[0]),
+            "Pose2: " + "<font color='{0}'><b>{1}</b></font>".format(
+            state2color[self._position_flag[1]], self._position_flag[1])]
+        ))
 
         # get image and do prediction
 
@@ -371,12 +392,13 @@ class MainProcess(object):
                 self._cap2.open()
 
         # read frames
-        # flag1, frame1 = self._cap1.read()
-        # flag2, frame2 = self._cap2.read()
-
-        # flag1 = True
-        flag1, frame1 = read_hik_frame(self.left_info_lst)
-        flag2, frame2 = read_hik_frame(self.right_info_lst)
+        if not use_hik:
+            flag1, frame1 = self._cap1.read()
+            flag2, frame2 = self._cap2.read()
+        else:
+            # flag1 = True
+            flag1, frame1 = read_hik_frame(self.left_info_lst)
+            flag2, frame2 = read_hik_frame(self.right_info_lst)
 
         # print(frame1.shape)
         # print(frame2.shape)
@@ -384,7 +406,8 @@ class MainProcess(object):
 
         if not flag1 and not flag2:
             # 两个相机都崩了
-            self._myshow.set_text("feedback", "ALL CAMERA BROKEN waiting until they resume")
+            self._myshow.set_text(
+                "feedback", "ALL CAMERA BROKEN waiting until they resume")
             time.sleep(0.05)
             return
         imgs = []
@@ -405,15 +428,13 @@ class MainProcess(object):
                 self._c2_frame += 1
                 myshow.record_object[1].write(frame2)
 
-
         # 这里加入id是为了提取pkl列表的特定项,get可以获得视频当前位置，当你更换你的神经网络时应改为注释项
         # TODO: 替换你的神经网络
         if use_save_camera:
-            results, location = self._net.infer(imgs,int(self._cap1.cap.get(cv2.CAP_PROP_POS_FRAMES))-1)
+            results, location = self._net.infer(
+                imgs, int(self._cap1.cap.get(cv2.CAP_PROP_POS_FRAMES))-1)
         else:
             results, location = self._net.infer(imgs)
-
-
 
         # 以下均通过None先对某一预测结果对象进行填充，然后在得到预测结果时，将None改为np.ndarray，后面用类型判断来得到是否有预测
         pred1 = None
@@ -436,22 +457,26 @@ class MainProcess(object):
             # check whether to start anti-dart
             if UART_passer.anti_dart:
                 self._scene[0].open_missile_two_stage()
-                self._myshow.set_text("feedback", "Start anti_missile two_stage")
+                self._myshow.set_text(
+                    "feedback", "Start anti_missile two_stage")
                 UART_passer.anti_dart = False
             self._scene[0].update(pred1[0], pred1[1], pred1[2][0])
         else:
-            self._myshow.set_text("feedback", "CAMERA1 BROKEN the scene of it will be the same until it resume")
+            self._myshow.set_text(
+                "feedback", "CAMERA1 BROKEN the scene of it will be the same until it resume")
         if isinstance(pred2, list):
             self._scene[1].update(pred2[0], pred2[1], pred2[2][0])
         else:
-            self._myshow.set_text("feedback", "CAMERA2 BROKEN the scene of it will be the same until it resume")
+            self._myshow.set_text(
+                "feedback", "CAMERA2 BROKEN the scene of it will be the same until it resume")
         # update location alarming class
         if self._position_flag.any():
-            locations = [] # 直接神经网络预测装甲板位置
-            extra_locations = [] # IoU预测位置
+            locations = []  # 直接神经网络预测装甲板位置
+            extra_locations = []  # IoU预测位置
             input_imgs = []
             if self._position_flag[0] and isinstance(pred1, list):
-                _, extra_bbox = self._scene[0].check(pred1[2][0], pred1[2][1]) # 反投影预警检测+IoU预测
+                _, extra_bbox = self._scene[0].check(
+                    pred1[2][0], pred1[2][1])  # 反投影预警检测+IoU预测
                 locations.append(pred1[2][0])
                 extra_locations.append(extra_bbox)
                 input_imgs.append(frame1)
@@ -471,11 +496,12 @@ class MainProcess(object):
 
             # if extra_locations[0] is not None:
             if use_save_radar:
-                self._alarm_map.two_camera_merge_update(locations, extra_locations, self._radar, input_imgs=input_imgs) # 合并预测
+                self._alarm_map.two_camera_merge_update(
+                    locations, extra_locations, self._radar, input_imgs=input_imgs)  # 合并预测
             else:
-                self._alarm_map.two_camera_merge_update(locations, extra_locations, self.depth_predictor, 
+                self._alarm_map.two_camera_merge_update(locations, extra_locations, self.depth_predictor,
                                                         use_save_radar=False, input_imgs=input_imgs)
-            na, ba = self._alarm_map.check() # na为是否有位置预警，ba为是否有基地预警
+            na, ba = self._alarm_map.check()  # na为是否有位置预警，ba为是否有基地预警
 
             self._scene[0].plot_alarming(na, ba)
             self._scene[1].plot_alarming(na, ba)
@@ -486,15 +512,15 @@ class MainProcess(object):
 
         # 视角切换展示哪个相机输出
         if self._myshow.view_change:
-            missile_alarm = self._scene[0].show_no_seen() # 接收右相机是否有飞镖预警
-            self._scene[1].show(self._show_api_s,missile_alarm)
+            missile_alarm = self._scene[0].show_no_seen()  # 接收右相机是否有飞镖预警
+            self._scene[1].show(self._show_api_s, missile_alarm)
 
         else:
             missile_alarm = self._scene[0].show(self._show_api_s)
             self._scene[1].show_no_seen(missile_alarm)
 
 
-#####logging###### 基于stdout和stderr来记录程序在运行过程中的输出
+# logging###### 基于stdout和stderr来记录程序在运行过程中的输出
 class Logger(object):
     def __init__(self, filename="Default.log"):
         self.terminal = sys.stdout
@@ -535,16 +561,19 @@ class Logger_Error(object):
 if __name__ == "__main__":
     import traceback
 
-    mlt.set_start_method('spawn')  # Make multiprocess can use opencv window, for linux
+    # Make multiprocess can use opencv window, for linux
+    mlt.set_start_method('spawn')
 
     date = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 
     if not os.path.exists(OUTPUT_LOGGING_DIR):
         os.mkdir(OUTPUT_LOGGING_DIR)
 
-    sys.stdout = Logger(os.path.join(OUTPUT_LOGGING_DIR,'{0}.log'.format(date)))
+    sys.stdout = Logger(os.path.join(
+        OUTPUT_LOGGING_DIR, '{0}.log'.format(date)))
 
-    sys.stderr = Logger_Error(os.path.join(OUTPUT_LOGGING_DIR,'{0}_error.log'.format(date)))
+    sys.stderr = Logger_Error(os.path.join(
+        OUTPUT_LOGGING_DIR, '{0}_error.log'.format(date)))
 
     # assert os.path.exists('/media/sjtu/DISK/'), "DISK NOT LOAD" # 外加载硬盘存在检查，若你未用外挂载硬盘可以删去
 
@@ -591,14 +620,16 @@ if __name__ == "__main__":
 
         title = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 
-        f = open(os.path.join(SPECIFIC_LOGGING_NON_BATTLE_MODE_DIR, f"{title:s}.log"), 'w')
+        f = open(os.path.join(
+            SPECIFIC_LOGGING_NON_BATTLE_MODE_DIR, f"{title:s}.log"), 'w')
     else:
         if not os.path.exists(SPECIFIC_LOGGING_BATTLE_MODE_DIR):
             os.mkdir(SPECIFIC_LOGGING_BATTLE_MODE_DIR)
 
         title = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
 
-        f = open(os.path.join(SPECIFIC_LOGGING_BATTLE_MODE_DIR, f"{title:s}_battle.log"), 'w')
+        f = open(os.path.join(SPECIFIC_LOGGING_BATTLE_MODE_DIR,
+                 f"{title:s}_battle.log"), 'w')
 
     try:
         main_process = MainProcess(myshow, f)
@@ -631,22 +662,24 @@ if __name__ == "__main__":
                 # 位姿估计
                 myshow.set_text("feedback", "perform position examine..")
                 UART_passer.getposition = False
-                main_process.get_position_new()
+                # main_process.get_position_new()
+                main_process.get_position_using_last()
 
-            main_process.spin_once(base_open, base_close, close_flag, is_opening=open_base_flag)
+            main_process.spin_once(base_open, base_close,
+                                   close_flag, is_opening=open_base_flag)
 
-            k = cv2.waitKey(1) # there to change the playing rate
+            k = cv2.waitKey(1)  # there to change the playing rate
             # 这些都是给雷达站准备人员，云台手操作不了
             if k == 0xff & ord("q"):
                 key_close = True
 
             elif k == 0xff & ord("a"):
-                myshow.btn2_on_clicked() # 切换视角
+                myshow.btn2_on_clicked()  # 切换视角
 
             elif k == 0xff & ord('g'):
-                UART_passer.anti_dart = True # 开启反导第二阶段
+                UART_passer.anti_dart = True  # 开启反导第二阶段
 
-            elif k == 0xff & ord("p"): # 暂停
+            elif k == 0xff & ord("p"):  # 暂停
                 cv2.waitKey(0)
     except Exception as e:
         # 出现异常自动结束，并在stderr中记录异常，可查看

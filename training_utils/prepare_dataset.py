@@ -9,12 +9,12 @@ from PIL import Image
 from tqdm import tqdm
 
 # set the path to the dataset
-path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/armor_dataset_v4/images/'
-label_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/armor_dataset_v4/labels/'
+path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/field_dataset/images/'
+label_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/field_dataset/labels/'
 # set the path to the train val test folder
-train_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/armor_dataset_v4/train/'
-val_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/armor_dataset_v4/val/'
-test_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/armor_dataset_v4/test/'
+train_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/field_dataset/train/'
+val_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/field_dataset/val/'
+test_path = '/home/cooper/Documents/RM2023-Deep-Radar/dataset/field_dataset/test/'
 
 # set the percentage of train val test
 train_percent = 0.8

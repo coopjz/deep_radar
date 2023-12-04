@@ -83,6 +83,7 @@ class Camera_Thread(object):
             if not self._open:
                 self.cap = cv2.VideoCapture(self._video_path)
                 self._open = True
+                print("[INFO] open video {0}".format(self._video_path))
                 if not self._is_init and self._open:
                     self._is_init = True
 
@@ -120,7 +121,7 @@ def read_yaml(camera_type):
     :param camera_type:相机编号
     :return: 读取成功失败标志位，相机内参，畸变系数，和雷达外参，相机图像大小
     '''
-    yaml_path = "{0}/camera{1}.yaml".format(CAMERA_YAML_PATH,
+    yaml_path = "{0}/camera{1}_old.yaml".format(CAMERA_YAML_PATH,
                                             camera_type)
     try:
         with open(yaml_path, 'rb')as f:

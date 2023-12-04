@@ -40,7 +40,7 @@ def armor_plot(location, img):
     '''
     if isinstance(location, np.ndarray):
         for gl in location:
-            l = gl[:8].reshape(4, 2).astype(np.int)
+            l = gl[:8].reshape(4, 2).astype(np.int32)
             for i in range(len(l)):
                 cv2.line(img, tuple(l[i]), tuple(l[(i + 1) % len(l)]), (0, 255, 0), 2)
 

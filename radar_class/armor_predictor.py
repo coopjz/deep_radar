@@ -1,25 +1,24 @@
-import argparse
-import os
-import platform
-import sys
-from pathlib import Path
-import numpy as np
 import torch
-
-# FILE = Path(__file__).resolve()
-# ROOT = FILE.parents[0]  # YOLOv5 root directory
-# if str(ROOT) not in sys.path:
-#     sys.path.append(str(ROOT))  # add ROOT to PATH
-# ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+import numpy as np
+from pathlib import Path
+import sys
+import platform
+import os
+import argparse
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[1]  # YOLOv5 root directory
+sys.path.append('/home/cooper/Documents/RM2023-Deep-Radar/yolov5')
 
 from yolov5.models.common import DetectMultiBackend
 from yolov5.utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
 from yolov5.utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, colorstr, cv2,
-                           increment_path, non_max_suppression, print_args, scale_boxes, strip_optimizer, xyxy2xywh)
+                                  increment_path, non_max_suppression, print_args, scale_boxes, strip_optimizer, xyxy2xywh)
 from yolov5.utils.plots import Annotator, colors, save_one_box
 from yolov5.utils.torch_utils import select_device, smart_inference_mode
 from yolov5.utils.augmentations import (Albumentations, augment_hsv, classify_albumentations, classify_transforms, copy_paste,
-                                 letterbox, mixup, random_perspective)
+                                        letterbox, mixup, random_perspective)
+
+
 
 class YoloV5(object):
     def __init__(self):
@@ -28,24 +27,29 @@ class YoloV5(object):
 
         :param weights:pkl文件的存放地址
         '''
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = DetectMultiBackend("/home/lastbasket/Code/rm23/LCR_sjtu/yolov5/RM_250.onnx", 
-                                        device=self.device, data='yolov5/data/rm.yaml')
-        self.num_net = cv2.dnn.readNetFromONNX('yolov5/mlp.onnx')
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
+        self.model = DetectMultiBackend("/home/cooper/Documents/RM2023-Deep-Radar/RM_250.onnx",
+                                        device=self.device, data='yolov5/data/sjtu.yaml')
+        self.num_net = cv2.dnn.readNetFromONNX('/home/cooper/Documents/RM2023-Deep-Radar/mlp.onnx')
+        # self.num_net = DetectMultiBackend(
+        #     weights='yolov5/armor.pt', device=self.device, data='yolov5/data/armor.yaml')
         print('init yolov5')
         self.pred_dict = {0: 'car_red',
-                            1: 'car_blue',
-                            2: 'car_unknow',
-                            3: 'watcher_red',
-                            4: 'watcher_blue',
-                            5: 'watcher_unknow',
-                            6: 'armor_red',
-                            7: 'armor_blue',
-                            8: 'armor_grey'}
-        self.armor_num_list = [1,2,3,4,5,'outpost','sentry','base','negative']
-        self.car_armor_map = {'car_red':[8,9,10,11,12], 'car_blue':[1,2,3,4,5]}
+                          1: 'car_blue',
+                          2: 'car_unknow',
+                          3: 'watcher_red',
+                          4: 'watcher_blue',
+                          5: 'watcher_unknow',
+                          6: 'armor_red',
+                          7: 'armor_blue',
+                          8: 'armor_grey'}
+        self.armor_num_list = [1, 2, 3, 4, 5,
+                               'outpost', 'sentry', 'base', 'negative']
+        self.car_armor_map = {'car_red': [
+            8, 9, 10, 11, 12], 'car_blue': [1, 2, 3, 4, 5]}
 
-    def infer(self,imgs):
+    def infer(self, imgs):
         '''
         这个函数用来预测
         :param imgs:list of input images
@@ -126,15 +130,17 @@ class YoloV5(object):
         preds = []
         for img in imgs:
             # in format of H, W, C and BGR
-            # copy im0 -> letterbox -> transform -> as_continuous 
+            # copy im0 -> letterbox -> transform -> as_continuous
             # -> tensor -> .float() -> /= 255 -> im = im[None]
-            
+
             img0 = img.copy()
 
             # gray img: BGR -> gray -> /255 -> float32
-            img0_gray = (cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) / 255.0).astype(np.float32)
+            img0_gray = (cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) /
+                         255.0).astype(np.float32)
 
-            img = letterbox(img0, [640, 640], stride=32, auto=False)[0]  # padded resize
+            img = letterbox(img0, [640, 640], stride=32, auto=False)[
+                0]  # padded resize
             img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
             img = np.ascontiguousarray(img)  # contiguous
             img = torch.from_numpy(img).to(self.device).float()
@@ -149,7 +155,8 @@ class YoloV5(object):
 
             pred = non_max_suppression(pred, conf_thres=0.25, iou_thres=0.45)
 
-            pred[0][:, :4] = scale_boxes(img.shape[2:], pred[0][:, :4], ori_shape).round()
+            pred[0][:, :4] = scale_boxes(
+                img.shape[2:], pred[0][:, :4], ori_shape).round()
             car_pred_per_img = []
             armor_pred_per_img = []
             car_bbox_pre_img = []
@@ -157,11 +164,11 @@ class YoloV5(object):
             ori_car_pred_per_img = []
             ori_armor_pred_per_img = []
             armor_num_per_img = []
-            if pred[0].shape[0]==0:
-                img_preds.append([]) 
+            if pred[0].shape[0] == 0:
+                img_preds.append([])
                 car_locations.append([None, None])
                 continue
-            
+
             for i in range(pred[0].shape[0]):
                 if (pred[0][i][5] == 0) or (pred[0][i][5] == 1):
                     ori_car_pred_per_img.append(pred[0][i])
@@ -175,30 +182,31 @@ class YoloV5(object):
                     # predict the number of armor
                     # crop as x1+1/4*width, x2-1/4*width for the armor_area to remove the LEDs for armor
                     armor_width = armor_x2 - armor_x1
-                    new_armor_x1 = armor_x1 + int(armor_width * 0.38) 
+                    new_armor_x1 = armor_x1 + int(armor_width * 0.38)
                     new_armor_x2 = armor_x2 - int(armor_width * 0.38)
 
-                    armor_area = img0_gray[armor_y1:armor_y2, 
+                    armor_area = img0_gray[armor_y1:armor_y2,
                                            new_armor_x1:new_armor_x2]
-                    
-                    ori_armor_area = img0[armor_y1:armor_y2, 
-                                           new_armor_x1:new_armor_x2]
-                    
+
+                    ori_armor_area = img0[armor_y1:armor_y2,
+                                          new_armor_x1:new_armor_x2]
+
                     cv2.imwrite('test_armor.png', armor_area*255)
                     cv2.imwrite('test_ori_armor.png', ori_armor_area)
 
-                    
                     # input is row: 20 col: 28 format: CV_8UC1
-                    armor_area = cv2.resize(armor_area, (20,28))
-                    blob = cv2.dnn.blobFromImage(armor_area, size=(20,28))
+                    armor_area = cv2.resize(armor_area, (20, 28))
+                    blob = cv2.dnn.blobFromImage(armor_area, size=(20, 28))
                     self.num_net.setInput(blob)
+                    # self.num_net(blob)
                     out = self.num_net.forward()[0]
                     max_out = max(out)
                     softmax_prob = np.exp(out - max_out)
                     soft_sum = softmax_prob.sum()
                     softmax_prob = softmax_prob / soft_sum
                     softmax_prob = softmax_prob[:8]
-                    max_index = np.where(softmax_prob==softmax_prob.max())[0][0]
+                    max_index = np.where(
+                        softmax_prob == softmax_prob.max())[0][0]
                     if max_index > 4:
                         continue
                     else:
@@ -225,7 +233,7 @@ class YoloV5(object):
                     armor_acc = ori_armor_pred_per_img[j][4].cpu().numpy()
 
                     # if the armor is in the range of the car then the car num is the armor num
-                    if (armor_x1>=car_x1)and(armor_y1>=car_y1)and(armor_x2<=car_x2)and(armor_y2<=car_y2):
+                    if (armor_x1 >= car_x1) and (armor_y1 >= car_y1) and (armor_x2 <= car_x2) and (armor_y2 <= car_y2):
                         car_num = armor_num_per_img[j]
                         single_armor_pred = [armor_x1, armor_y1,
                                              armor_x1, armor_y2,
@@ -235,27 +243,25 @@ class YoloV5(object):
                                              car_index,
                                              armor_x1, armor_y1,
                                              armor_x2-armor_x1, armor_y2-armor_y1]
-                        
+
                         armor_pred_per_img.append(single_armor_pred)
                 if car_num == -1:
                     continue
                 car_index = car_index + 1
-                single_car_pred = [f'{self.pred_dict[car_cls]}_{car_num}', float(car_acc), 
-                                    [float(car_x1), float(car_y1), float(car_x2), float(car_y2)]]
+                single_car_pred = [f'{self.pred_dict[car_cls]}_{car_num}', float(car_acc),
+                                   [float(car_x1), float(car_y1), float(car_x2), float(car_y2)]]
                 car_bbox_pre_img.append([car_x1, car_y1, car_x2, car_y2])
                 car_pred_per_img.append(single_car_pred)
 
             if len(car_pred_per_img) == 0:
-                img_preds.append([]) 
+                img_preds.append([])
                 car_locations.append([None, None])
                 continue
 
             img_preds.append(car_pred_per_img)
             car_locations.append([np.array(armor_pred_per_img).astype(np.float32),
                                  np.array(car_bbox_pre_img).astype(np.float32)])
-            
+
             preds.append(pred)
 
-        
-
-        return img_preds,car_locations
+        return img_preds, car_locations
