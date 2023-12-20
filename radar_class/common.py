@@ -58,11 +58,14 @@ def plot(results, frame, only_car=True):
     color_bbox = []
     # plot on the raw frame
     for cat, score, bound in results:
-        if cat in "watcher base" and only_car:
-            continue
-        if '0' in cat:
+        # if cat in "watcher base" and only_car:
+        #     continue
+        # if '0' in cat:
             # 通过颜色检测出的bounding box
-            color_bbox.append(np.array([color2enemy[cat.split('_')[1]], *bound]))
+        if cat >5:
+            color_bbox.append(np.array([0, *bound]))
+        else:
+            color_bbox.append(np.array([1, *bound]))
         plot_one_box(cat, bound, frame)
     if len(color_bbox):
         return np.stack(color_bbox, axis=0)
@@ -71,18 +74,19 @@ def plot(results, frame, only_car=True):
 
 
 def plot_one_box(cat, b, img):
-    if cat.split('_')[0] == "car":
-        if len(cat.split('_')) == 3:  # car_{armor_color}_{armor_id}
-            cat = cat.split('_')
-            color = cat[1]
-            armor = cat[2]
-        else:
-            color = "C"
-            armor = '0'
+    
+        
+    if cat >5:
+        
+        color = 'R'
+        armor = str(cat-5)
     else:
-        # 只预测出颜色情况
-        color = cat  # ‘R0’ or 'B0'
-        armor = '0'
+        color = 'B'
+        armor = str(cat)
+    
+        
+    
+   
     cv2.rectangle(img, (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
     cv2.putText(img, color[0].upper() + armor, (int(b[0]), int(b[1])), cv2.FONT_HERSHEY_SIMPLEX,
                 3 * img.shape[1] // 3088, (255, 0, 255), 2)
